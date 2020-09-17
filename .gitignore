@@ -1,0 +1,12 @@
+build/*
+out/*
+
+*.o
+*.d
+*.elf
+*.bin
+*.hex
+*.lst
+*.map
+
+.config*
