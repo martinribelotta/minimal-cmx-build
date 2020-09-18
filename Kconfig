@@ -1,0 +1,278 @@
+config CROSS_PREFIX
+    string "Cross compile prefix"
+    default "arm-none-eabi-"
+    help
+      This string is prepends to CC, CXX, LD, etc commands
+
+config TARGET_NAME
+    string "Target name"
+    default "firmware"
+    help
+      Name of final executable <target name>.{bin, elf, hex...}
+
+menu "Processor"
+config HAVE_FPU
+    bool
+
+config HAVE_FPUDP
+    bool
+
+choice CPU
+    prompt "CPU Type"
+    default CPU_cortex-m3
+    help
+      CPU model type
+
+config CPU_cortex-m0
+    bool "cortex m0"
+    select USE_THUMB
+
+config CPU_cortex-m0plus
+    bool "cortex m0+"
+    select USE_THUMB
+
+config CPU_cortex-m3
+    bool "cortex m3"
+    select USE_THUMB
+
+config CPU_cortex-m4
+    bool "cortex m4"
+    select USE_THUMB
+    select HAVE_FPU
+    imply USE_FPU
+
+config CPU_cortex-m7
+    bool "cortex m7"
+    select USE_THUMB
+    select HAVE_FPU
+    select HAVE_FPUDP
+    imply USE_FPU
+    imply USE_FPUDP
+
+config CPU_cortex-m23
+    bool "cortex m23"
+    select USE_THUMB
+
+config CPU_cortex-m33
+    bool "cortex m33"
+    select USE_THUMB
+    select HAVE_FPU
+
+config CPU_cortex-m35
+    bool "cortex m35"
+    select USE_THUMB
+    select HAVE_FPU
+
+config CPU_cortex-r4
+    bool "cortex-r4"
+    select HAVE_FPU
+    select HAVE_FPUDP
+
+config CPU_cortex-r5
+    bool "cortex-r5"
+    select HAVE_FPU
+    select HAVE_FPUDP
+
+config CPU_cortex-a5
+    bool "cortex-a5"
+    select HAVE_FPU
+    select HAVE_FPUDP
+    imply USE_FPU
+
+config CPU_cortex-a7
+    bool "cortex-a7"
+    select HAVE_FPU
+    select HAVE_FPUDP
+    imply USE_FPU
+    imply USE_FPUDP
+
+config CPU_cortex-a9
+    bool "cortex-a9"
+    select HAVE_FPU
+    select HAVE_FPUDP
+    imply USE_FPU
+    imply USE_FPUDP
+
+endchoice
+
+config USE_THUMB
+    bool "Use thumb/thumb2 code"
+    help
+     Compile with thumb code (Always [yes] if you compile for cortex-m)
+
+config USE_FPU
+    bool "Use FPU (SP)"
+    depends on HAVE_FPU
+    help
+      Enable FPU usage (by default single precision)
+
+config USE_FPUDP
+    bool "Enable dual precision (DP)"
+    depends on USE_FPU
+    help
+      Enable double precision FPU
+
+endmenu
+
+menu "compiler"
+
+config FFLAGS_move-loop-invariants
+    bool "Optimize loop invariants"
+    default y
+    help
+      Enables the loop invariant motion pass in the RTL loop optimizer
+
+choice OPT
+    prompt "Optimization"
+    default OPT_g
+    help
+      Compiler optimizations
+
+config OPT_0
+    bool "-O0"
+    help
+      No Optimization is applied
+
+config OPT_1
+    bool "-O1"
+    help
+      Conservative optimizations
+
+config OPT_2
+    bool "-O2"
+    help
+      Aggressive but secure optimizations
+
+config OPT_3
+    bool "-O3"
+    help
+      Very aggressive optimizations, code behavioral change
+
+config OPT_s
+    bool "-Os"
+    help
+      Optimize for code size
+
+config OPT_g
+    bool "-Og"
+    help
+      Enable all optimizations that no break the debug experience
+
+config OPT_fast
+    bool "-Ofast"
+    help
+      Enable all optimizations that improve speed execution
+
+endchoice
+
+choice
+    prompt "Debug level"
+    default DBG_3
+
+config DBG_0
+    bool "-g0"
+    help
+      Produces no debug information at all
+
+config DBG_1
+    bool "-g1"
+    help
+      Level 1 produces minimal information, enough for making
+      backtraces in parts of the program that you don't plan to debug.
+      This includes descriptions of functions and external variables,
+      and line number tables, but no information about local variables.
+
+config DBG_3
+    bool "-g3"
+    help
+      includes extra information, such as all the macro definitions present
+      in the program. Some debuggers support macro expansion when you use it
+
+endchoice
+
+config FFLAGS_data-sections
+    bool "Create section for every variable"
+    imply LDFLAGSWL_--gc-sections
+    default y
+    help
+      Enable -fdata-sections compiler flag.
+
+      This flag create independent section for every data variable
+      in the form of ".data.<mangled variable name>".
+      In conjunction of linker flag "--gc-sections", help to remove
+      unused data.
+
+config FFLAGS_function-sections
+    bool "Create section for every function/method"
+    imply LDFLAGSWL_--gc-sections
+    default y
+    help
+      Enable -ffunction-sections compiler flag.
+
+      This flag create independent section for every function
+      in the form of ".text.<mangled function signature>".
+      In conjunction of linker flag "--gc-sections", help to remove
+      unused data.
+
+config MFLAGS_pure-code
+    bool "Create text with pure code"
+    default n
+    help
+      Do not allow constant data to be placed in code sections.
+      
+      Additionally, when compiling for ELF object format give all text
+      sections the ELF processor-specific section attribute "SHF_ARM_PURECODE".
+      This option is only available when generating non-pic code for M-profile
+      targets.
+
+menu "specs"
+
+choice
+    prompt "syscall implementation"
+    default SPECS_nosys
+    help
+      System call implementation
+
+config SPECS_nosys
+    bool "Dummy syscalls (nosys)"
+    help
+      nosys.spec enable dummy system functions
+
+config SPECS_rdimon
+    bool "RDIMON (semihosting)"
+    help
+      Enable semihosting syscalls
+
+endchoice
+
+config SPECS_nano
+    bool "Newlib nano"
+    default y
+    help
+      Enable small footprint function versions
+
+endmenu
+
+endmenu
+
+menu "Linker"
+
+config LDFLAGSWL_--gc-sections
+    bool "Garbage collect unused sections"
+    default y
+    help
+      Remove unreferenced/no-KEEP-marked sections and symbols
+
+config LDFLAGSWL_--print-memory-usage
+    bool "Print memory usage after build"
+    default y
+    help
+      Print memory usage map at the end of linking
+
+config LDFLAGS_-nostartfiles
+    bool "Do not link start files"
+    default y
+    help
+      Disable link of start files
+
+endmenu

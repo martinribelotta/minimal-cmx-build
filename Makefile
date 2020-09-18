@@ -1,4 +1,21 @@
-TARGET:=armv7m-universal-boot
+.SUFFIXES:
+
+-include .config
+
+ALL_CONFIGS:=$(filter CONFIG_%, $(.VARIABLES))
+
+extract_yvar=$(patsubst CONFIG_$(strip $(1))%, %, $(filter CONFIG_$(strip $(1))%, $(ALL_CONFIGS)))
+
+define yes-var
+FLAG-$(strip $(2))-y:=$(strip $(3))
+$(strip $(1))$$(FLAG-$(strip $(2))-$$(CONFIG_$(strip $(2))))
+endef
+
+.PHONY: .none
+.none:
+	@true
+
+TARGET:=$(patsubst "%", %, $(CONFIG_TARGET_NAME))
 OUT:=out
 
 CSRC:=$(wildcard src/*.c)
@@ -9,12 +26,7 @@ LIBPATH:=lib
 
 LIBS:=
 
-SPECS:=nosys
-
 LDSCRIPTS:=link.ld
-
-ARCH_FLAGS:=-mcpu=cortex-m3 -mthumb
-OPT_FLAGS:=-Og -g3
 
 TARGET_ELF:=$(addprefix $(OUT)/, $(addsuffix .elf, $(TARGET)))
 TARGET_BIN:=$(patsubst %.elf, %.bin, $(TARGET_ELF))
@@ -28,28 +40,43 @@ Q:=
 OBJECTS:=$(addprefix $(OUT)/, $(notdir $(patsubst %.c, %.o, $(CSRC))))
 DEPS:=$(addsuffix .o.dep.mk, $(OBJECTS))
 
-CROSS?=arm-none-eabi-
+CROSS:=$(patsubst "%", %, $(CONFIG_CROSS_PREFIX))
 CC:=$(CROSS)gcc
 LD:=$(CROSS)gcc
 OCP:=$(CROSS)objcopy
 OD:=$(CROSS)objdump
 RM:=rm -fr
 
+OPT_FLAGS:=$(addprefix -O, $(call extract_yvar, OPT_))
+OPT_FLAGS+=$(addprefix -g, $(call extract_yvar, DBG_))
+
+ARCH_FLAGS:=$(addprefix -mcpu=, $(call extract_yvar, CPU_))
+$(eval $(call yes-var, ARCH_FLAGS+=, USE_THUMB, -mthumb))
+$(eval $(call yes-var, ARCH_FLAGS+=, USE_FPU, -mfloat-abi=hard))
+$(eval $(call yes-var, ARCH_FLAGS+=, USE_FPUDP, -mfpu=fpv5-sp-d16))
+
+SPECS:=$(call extract_yvar, SPECS_)
+
 SPEC_FLAGS:=$(addprefix -specs=, $(addsuffix .specs, $(SPECS)))
 
 CFLAGS:=$(ARCH_FLAGS)
 CFLAGS+=$(OPT_FLAGS)
 CFLAGS+=$(SPEC_FLAGS)
-CFLAGS+=-fdata-sections -ffunction-sections -fmove-loop-invariants
+CFLAGS+=$(addprefix -f, $(call extract_yvar, FFLAGS_))
+CFLAGS+=$(addprefix -m, $(call extract_yvar, MFLAGS_))
 
-LINKER_FLAGS:=--gc-sections -Map=$(strip $(TARGET_MAP)) --print-memory-usage
+$(info CFLAGS=$(CFLAGS))
+
+LINKER_FLAGS:=$(call extract_yvar, LDFLAGSWL_)
+LINKER_FLAGS+=-Map=$(strip $(TARGET_MAP))
 
 LDFLAGS:=$(ARCH_FLAGS) $(SPEC_FLAGS)
 LDFLAGS+=$(addprefix -Wl$(COMMA), $(LINKER_FLAGS))
 LDFLAGS+=$(addprefix -L, $(LIBPATH))
 LDFLAGS+=$(addprefix -l, $(LIBS))
 LDFLAGS+=$(addprefix -T, $(LDSCRIPTS))
-LDFLAGS+=-nostartfiles
+LDFLAGS+=$(call extract_yvar, LDFLAGS_)
+$(info LDFLAGS=$(LDFLAGS))
 
 LSTSECTIONS:=$(foreach l, $(LDSCRIPT_FILES), $(strip $(shell cat $l | grep -E '\s\.\S+\s+\:' | cut -f 1 -d ':') ))
 LSTFLAGS:=-z -x -w -t -S $(addprefix -j, $(LSTSECTIONS))
