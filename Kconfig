@@ -20,6 +20,12 @@ config HAVE_FPUDP
 config IS_MPROFILE
     bool
 
+config FPU_DEFAULT
+    def_bool n
+
+config FPUDP_DEFAULT
+    def_bool n
+
 choice CPU
     prompt "CPU Type"
     default CPU_cortex-m3
@@ -46,7 +52,7 @@ config CPU_cortex-m4
     select USE_THUMB
     select IS_MPROFILE
     select HAVE_FPU
-    imply USE_FPU
+    select FPU_DEFAULT
 
 config CPU_cortex-m7
     bool "cortex m7"
@@ -54,8 +60,8 @@ config CPU_cortex-m7
     select IS_MPROFILE
     select HAVE_FPU
     select HAVE_FPUDP
-    imply USE_FPU
-    imply USE_FPUDP
+    select FPU_DEFAULT
+    select FPUDP_DEFAULT
 
 config CPU_cortex-m23
     bool "cortex m23"
@@ -88,21 +94,21 @@ config CPU_cortex-a5
     bool "cortex-a5"
     select HAVE_FPU
     select HAVE_FPUDP
-    imply USE_FPU
+    select FPU_DEFAULT
 
 config CPU_cortex-a7
     bool "cortex-a7"
     select HAVE_FPU
     select HAVE_FPUDP
-    imply USE_FPU
-    imply USE_FPUDP
+    select FPU_DEFAULT
+    select FPUDP_DEFAULT
 
 config CPU_cortex-a9
     bool "cortex-a9"
     select HAVE_FPU
     select HAVE_FPUDP
-    imply USE_FPU
-    imply USE_FPUDP
+    select FPU_DEFAULT
+    select FPUDP_DEFAULT
 
 endchoice
 
@@ -114,12 +120,14 @@ config USE_THUMB
 config USE_FPU
     bool "Use FPU (SP)"
     depends on HAVE_FPU
+    default y if FPU_DEFAULT
     help
       Enable FPU usage (by default single precision)
 
 config USE_FPUDP
     bool "Enable dual precision (DP)"
     depends on USE_FPU
+    default y if FPUDP_DEFAULT
     help
       Enable double precision FPU
 
@@ -207,7 +215,6 @@ endchoice
 
 config FFLAGS_data-sections
     bool "Create section for every variable"
-    imply LDFLAGSWL_--gc-sections
     default y
     help
       Enable -fdata-sections compiler flag.
@@ -219,7 +226,6 @@ config FFLAGS_data-sections
 
 config FFLAGS_function-sections
     bool "Create section for every function/method"
-    imply LDFLAGSWL_--gc-sections
     default y
     help
       Enable -ffunction-sections compiler flag.
@@ -275,7 +281,7 @@ menu "Linker"
 
 config LDFLAGSWL_--gc-sections
     bool "Garbage collect unused sections"
-    default y
+    default y if FFLAGS_data-sections || FFLAGS_function-sections
     help
       Remove unreferenced/no-KEEP-marked sections and symbols
 
