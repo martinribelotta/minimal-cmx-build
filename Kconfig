@@ -17,6 +17,9 @@ config HAVE_FPU
 config HAVE_FPUDP
     bool
 
+config IS_MPROFILE
+    bool
+
 choice CPU
     prompt "CPU Type"
     default CPU_cortex-m3
@@ -26,24 +29,29 @@ choice CPU
 config CPU_cortex-m0
     bool "cortex m0"
     select USE_THUMB
+    select IS_MPROFILE
 
 config CPU_cortex-m0plus
     bool "cortex m0+"
     select USE_THUMB
+    select IS_MPROFILE
 
 config CPU_cortex-m3
     bool "cortex m3"
     select USE_THUMB
+    select IS_MPROFILE
 
 config CPU_cortex-m4
     bool "cortex m4"
     select USE_THUMB
+    select IS_MPROFILE
     select HAVE_FPU
     imply USE_FPU
 
 config CPU_cortex-m7
     bool "cortex m7"
     select USE_THUMB
+    select IS_MPROFILE
     select HAVE_FPU
     select HAVE_FPUDP
     imply USE_FPU
@@ -52,15 +60,18 @@ config CPU_cortex-m7
 config CPU_cortex-m23
     bool "cortex m23"
     select USE_THUMB
+    select IS_MPROFILE
 
 config CPU_cortex-m33
     bool "cortex m33"
     select USE_THUMB
+    select IS_MPROFILE
     select HAVE_FPU
 
 config CPU_cortex-m35
     bool "cortex m35"
     select USE_THUMB
+    select IS_MPROFILE
     select HAVE_FPU
 
 config CPU_cortex-r4
@@ -119,8 +130,12 @@ menu "compiler"
 config FFLAGS_move-loop-invariants
     bool "Optimize loop invariants"
     default y
+    depends on OPT_g || OPT_0
     help
-      Enables the loop invariant motion pass in the RTL loop optimizer
+      Enables the loop invariant motion pass in the RTL loop optimizer.
+
+      Enable by default if -O is equal or great than 1, size or speed.
+      Disable by default at -O0 and -Og.
 
 choice OPT
     prompt "Optimization"
@@ -217,6 +232,7 @@ config FFLAGS_function-sections
 config MFLAGS_pure-code
     bool "Create text with pure code"
     default n
+    depends on IS_MPROFILE
     help
       Do not allow constant data to be placed in code sections.
       
