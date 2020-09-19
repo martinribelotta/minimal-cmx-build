@@ -6,14 +6,18 @@ ALL_CONFIGS:=$(filter CONFIG_%, $(.VARIABLES))
 
 extract_yvar=$(patsubst CONFIG_$(strip $(1))%, %, $(filter CONFIG_$(strip $(1))%, $(ALL_CONFIGS)))
 
+if_xexist=$(shell which $(1))
+if_xexist_or=$(if $(shell which $(1)), $(1), $(2))
+
 define yes-var
 FLAG-$(strip $(2))-y:=$(strip $(3))
 $(strip $(1))$$(FLAG-$(strip $(2))-$$(CONFIG_$(strip $(2))))
 endef
 
-.PHONY: .none
-.none:
-	@true
+.PHONY: .info
+.info:
+	@echo CFLAGS=$(CFLAGS)
+	@echo LDFLAGS=$(LDFLAGS)
 
 TARGET:=$(patsubst "%", %, $(CONFIG_TARGET_NAME))
 OUT:=out
@@ -35,7 +39,26 @@ TARGET_MAP:=$(patsubst %.elf, %.map, $(TARGET_ELF))
 TARGET_LST:=$(patsubst %.elf, %.lst, $(TARGET_ELF))
 
 COMMA:=,
+
+ifeq ($(CONFIG_VERBOSE),y)
 Q:=
+else
+Q:=@
+endif
+
+MENUCONFIG_CMD?=$(call if_xexist, kconfig-mconf)
+ifneq ($(OS),Windows_NT)
+ifeq ($(XDG_SESSION_TYPE),x11)
+MENUCONFIG_CMD:=$(call if_xexist_or, kconfig-gconf, kconfig-mconf)
+endif
+ifeq ($(MENUCONFIG_CMD),)
+MENUCONFIG_CMD:=$(call if_xexist_or, kconfig-qconf, kconfig-mconf)
+endif
+endif
+
+ifeq ($(MENUCONFIG_CMD),)
+$(error $(MENUCONFIG_CMD) is not in path)
+endif
 
 OBJECTS:=$(addprefix $(OUT)/, $(notdir $(patsubst %.c, %.o, $(CSRC))))
 DEPS:=$(addsuffix .o.dep.mk, $(OBJECTS))
@@ -65,8 +88,6 @@ CFLAGS+=$(SPEC_FLAGS)
 CFLAGS+=$(addprefix -f, $(call extract_yvar, FFLAGS_))
 CFLAGS+=$(addprefix -m, $(call extract_yvar, MFLAGS_))
 
-$(info CFLAGS=$(CFLAGS))
-
 LINKER_FLAGS:=$(call extract_yvar, LDFLAGSWL_)
 LINKER_FLAGS+=-Map=$(strip $(TARGET_MAP))
 
@@ -76,7 +97,6 @@ LDFLAGS+=$(addprefix -L, $(LIBPATH))
 LDFLAGS+=$(addprefix -l, $(LIBS))
 LDFLAGS+=$(addprefix -T, $(LDSCRIPTS))
 LDFLAGS+=$(call extract_yvar, LDFLAGS_)
-$(info LDFLAGS=$(LDFLAGS))
 
 LSTSECTIONS:=$(foreach l, $(LDSCRIPT_FILES), $(strip $(shell cat $l | grep -E '\s\.\S+\s+\:' | cut -f 1 -d ':') ))
 LSTFLAGS:=-z -x -w -t -S $(addprefix -j, $(LSTSECTIONS))
@@ -114,7 +134,10 @@ $(TARGET_LST): $(TARGET_ELF)
 	@echo LIST $@
 	$(Q)$(OD) $(LSTFLAGS) $< > $@
 
+menuconfig:
+	$(Q)$(MENUCONFIG_CMD) Kconfig
+
 clean:
 	$(Q)$(RM) $(OUT)
 
-.PHONY: clean all
+.PHONY: clean all menuconfig

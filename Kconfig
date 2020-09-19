@@ -10,6 +10,12 @@ config TARGET_NAME
     help
       Name of final executable <target name>.{bin, elf, hex...}
 
+config VERBOSE
+    bool "Verbose build"
+    default n
+    help
+      Print every commands when build
+
 menu "Processor"
 config HAVE_FPU
     bool
