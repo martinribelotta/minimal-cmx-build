@@ -3,6 +3,7 @@
 -include .config
 
 ALL_CONFIGS:=$(filter CONFIG_%, $(.VARIABLES))
+ALL_CONFIG_DEF:=$(subst __,_, $(subst ___,_, $(subst -,_, $(ALL_CONFIGS))))
 
 extract_yvar=$(patsubst CONFIG_$(strip $(1))%, %, $(filter CONFIG_$(strip $(1))%, $(ALL_CONFIGS)))
 
@@ -18,6 +19,7 @@ endef
 .info:
 	@echo CFLAGS=$(CFLAGS)
 	@echo LDFLAGS=$(LDFLAGS)
+	@echo ALL_CONFIG_DEF=$(ALL_CONFIG_DEF)
 
 TARGET:=$(patsubst "%", %, $(CONFIG_TARGET_NAME))
 OUT:=out
@@ -85,8 +87,7 @@ SPEC_FLAGS:=$(addprefix -specs=, $(addsuffix .specs, $(SPECS)))
 CFLAGS:=$(ARCH_FLAGS)
 CFLAGS+=$(OPT_FLAGS)
 CFLAGS+=$(SPEC_FLAGS)
-CFLAGS+=$(addprefix -f, $(call extract_yvar, FFLAGS_))
-CFLAGS+=$(addprefix -m, $(call extract_yvar, MFLAGS_))
+CFLAGS+=$(addprefix -, $(call extract_yvar, CFLAGS_))
 
 LINKER_FLAGS:=$(call extract_yvar, LDFLAGSWL_)
 LINKER_FLAGS+=-Map=$(strip $(TARGET_MAP))
@@ -104,10 +105,15 @@ LSTFLAGS:=-z -x -w -t -S $(addprefix -j, $(LSTSECTIONS))
 all: $(TARGET_ELF) $(TARGET_BIN) $(TARGET_HEX) $(TARGET_LST)
 
 $(OUT):
-	mkdir -p $(OUT)
+	@mkdir -p $(OUT)
+
+$(OUT)/genhdr/autoconf.h: .config | $(OUT)
+	@echo GEN $@
+	@mkdir -p $(dir $@)
+	@sh gen-hdr.sh $< > $@
 
 define cc_rule
-$(OUT)/$(notdir $(patsubst %.c, %.o, $1)): $1 | $(OUT)
+$(OUT)/$(notdir $(patsubst %.c, %.o, $1)): $1 $(OUT)/genhdr/autoconf.h | $(OUT)
 	@echo CC $$<
 	$(Q)$(CC) -MMD -MP -MF $$@.dep.mk -c $(CFLAGS) -o $$@ $$<
 endef

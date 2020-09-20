@@ -141,7 +141,7 @@ endmenu
 
 menu "compiler"
 
-config FFLAGS_move-loop-invariants
+config CFLAGS_fmove-loop-invariants
     bool "Optimize loop invariants"
     default y
     depends on OPT_g || OPT_0
@@ -219,7 +219,7 @@ config DBG_3
 
 endchoice
 
-config FFLAGS_data-sections
+config CFLAGS_fdata-sections
     bool "Create section for every variable"
     default y
     help
@@ -230,7 +230,7 @@ config FFLAGS_data-sections
       In conjunction of linker flag "--gc-sections", help to remove
       unused data.
 
-config FFLAGS_function-sections
+config CFLAGS_ffunction-sections
     bool "Create section for every function/method"
     default y
     help
@@ -241,7 +241,7 @@ config FFLAGS_function-sections
       In conjunction of linker flag "--gc-sections", help to remove
       unused data.
 
-config MFLAGS_pure-code
+config CFLAGS_mpure-code
     bool "Create text with pure code"
     default n
     depends on IS_MPROFILE
@@ -285,7 +285,7 @@ endmenu
 
 menu "Linker"
 
-config LDFLAGSWL_--gc-sections
+config LDFLAGS_WL_--gc-sections
     bool "Garbage collect unused sections"
     default y if FFLAGS_data-sections || FFLAGS_function-sections
     help
